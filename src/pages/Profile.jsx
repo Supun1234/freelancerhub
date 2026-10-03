@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
 import AppLayout from '../components/layout/AppLayout'
 import PostCard from '../components/ui/PostCard'
+import JobRequestModal from '../components/ui/JobRequestModal'
 
 export default function Profile() {
   const { username } = useParams()
@@ -19,6 +20,8 @@ export default function Profile() {
   const [loading, setLoading]   = useState(true)
   const [notFound, setNotFound] = useState(false)
   const [activeTab, setActiveTab] = useState('posts')
+  const [showJobRequest, setShowJobRequest] = useState(false)
+  const [jobSent, setJobSent]               = useState(false)
 
   const isOwnProfile = myProfile?.username === username
 
@@ -184,20 +187,26 @@ export default function Profile() {
                   </button>
                 ) : (
                   <>
-                    <button className="
+                  <button className="
                       px-4 py-2 bg-surface2 border border-border
                       text-white font-display font-bold text-xs
                       rounded-xl hover:border-muted transition-colors
                     ">
                       + Follow
-                    </button>
-                    <button className="
-                      px-4 py-2 bg-accent2 text-black
-                      font-display font-bold text-xs
-                      rounded-xl hover:opacity-90 transition-opacity
-                    ">
-                      💬 Contact
-                    </button>
+                  </button>
+                  <button 
+                      onClick={() => setShowJobRequest(true)}
+                      disabled={jobSent}
+                      className="
+                        px-4 py-2 bg-accent2 text-black
+                        font-display font-bold text-xs
+                        rounded-xl hover:opacity-90
+                        disabled:opacity-50 disabled:cursor-not-allowed
+                        transition-opacity
+                      "
+                  >
+                      {jobSent ? '✓ Request Sent' : '💬 Contact'}
+                  </button>
                   </>
                 )}
               </div>
@@ -493,6 +502,16 @@ export default function Profile() {
         )}
 
       </div>
+      {showJobRequest && (
+  <JobRequestModal
+    freelancer={profile}
+    onClose={() => setShowJobRequest(false)}
+    onSent={(job) => {
+      setJobSent(true)
+      setShowJobRequest(false)
+    }}
+  />
+)}
     </AppLayout>
   )
 }

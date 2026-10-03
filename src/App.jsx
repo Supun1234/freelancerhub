@@ -1,9 +1,10 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
-import Landing from './pages/Landing'
-import Login from './pages/Login'
+import Landing  from './pages/Landing'
+import Login    from './pages/Login'
 import Register from './pages/Register'
-import Feed from './pages/Feed'
-import Profile from './pages/Profile'
+import Feed     from './pages/Feed'
+import Profile  from './pages/Profile'
+import Jobs     from './pages/Jobs'
 
 function App() {
   return (
@@ -14,6 +15,7 @@ function App() {
         <Route path="/register"          element={<Register />} />
         <Route path="/feed"              element={<Feed />} />
         <Route path="/profile/:username" element={<Profile />} />
+        <Route path="/jobs"              element={<Jobs />} />
       </Routes>
     </BrowserRouter>
   )

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../hooks/useAuth'
 
@@ -11,6 +11,7 @@ export default function PostCard({ post, onUpdate }) {
   const [comments, setComments] = useState([])
   const [commentText, setCommentText] = useState('')
   const [loadingComments, setLoadingComments] = useState(false)
+  const navigate = useNavigate()
 
   // post type style
   const typeConfig = {
@@ -288,7 +289,9 @@ export default function PostCard({ post, onUpdate }) {
 
         {/* Contact button — only on other people's posts */}
         {user && post.user_id !== user.id && (
-          <button className="
+          <button 
+            onClick={() => navigate(`/profile/${post.users?.username}`)}
+            className="
             ml-auto px-4 py-1.5
             bg-accent2 text-black
             font-display font-bold text-xs

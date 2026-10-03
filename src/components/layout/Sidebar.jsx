@@ -4,12 +4,13 @@ import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../hooks/useAuth'
 
 export default function Sidebar() {
-  const { user } = useAuth()
+  
   const location = useLocation()
 
   const [circles, setCircles]     = useState([])
   const [myCircles, setMyCircles] = useState([])
   const [loading, setLoading]     = useState(true)
+  const { user, profile } = useAuth()
 
   useEffect(() => {
     fetchCircles()
@@ -60,10 +61,10 @@ export default function Sidebar() {
   const navItems = [
     { icon: '🏠', label: 'My Feed',  path: '/feed' },
     { icon: '🔍', label: 'Explore',  path: '/explore' },
-    { icon: '📋', label: 'My Posts', path: '/my-posts' },
+    { icon: '📋', label: 'My Jobs',  path: '/jobs' },
     { icon: '💬', label: 'Messages', path: '/messages' },
     { icon: '⭐', label: 'Reviews',  path: '/reviews' },
-    { icon: '👤', label: 'Profile',  path: '/profile' },
+    { icon: '👤', label: 'Profile',  path: '/profile/${profile?.username}' },
   ]
 
   return (
