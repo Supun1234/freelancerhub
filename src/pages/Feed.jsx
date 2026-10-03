@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
+import AppLayout from '../components/layout/AppLayout'
 
 export default function Feed() {
   const { user, profile, loading } = useAuth()
@@ -17,11 +18,15 @@ export default function Feed() {
   )
 
   return (
-    <div className="min-h-screen bg-bg p-8">
-      <h1 className="font-display font-bold text-2xl text-white mb-2">
-        Welcome, {profile?.full_name} 👋
-      </h1>
-      <p className="text-muted">Feed coming next.</p>
-    </div>
+    <AppLayout>
+      <div className="p-6">
+        <h1 className="font-display font-bold text-2xl text-white mb-1">
+          Welcome back, {profile?.full_name} 👋
+        </h1>
+        <p className="text-muted text-sm">
+          Your feed is loading soon.
+        </p>
+      </div>
+    </AppLayout>
   )
 }
