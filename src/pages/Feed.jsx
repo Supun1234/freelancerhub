@@ -10,9 +10,10 @@ export default function Feed() {
   const { user, loading } = useAuth()
   const navigate = useNavigate()
 
-  const [posts, setPosts]     = useState([])
-  const [circles, setCircles] = useState([])
+  const [posts, setPosts]       = useState([])
+  const [circles, setCircles]   = useState([])
   const [fetching, setFetching] = useState(true)
+  const [activeTab, setActiveTab] = useState('all')
 
   useEffect(() => {
     if (!loading && !user) navigate('/login')
@@ -47,7 +48,6 @@ export default function Feed() {
       .order('created_at', { ascending: false })
       .limit(20)
 
-    // check which posts the current user liked
     if (data && data.length > 0) {
       const { data: likes } = await supabase
         .from('post_likes')
@@ -73,6 +73,11 @@ export default function Feed() {
     setPosts(prev => [{ ...newPost, user_has_liked: false }, ...prev])
   }
 
+  // filtered posts based on active tab
+  const filteredPosts = posts.filter(post =>
+    activeTab === 'all' ? true : post.type === activeTab
+  )
+
   if (loading) return (
     <div className="min-h-screen bg-bg flex items-center justify-center">
       <p className="text-muted">Loading...</p>
@@ -94,19 +99,25 @@ export default function Feed() {
           flex gap-1 bg-surface border border-border
           rounded-xl p-1 mb-4
         ">
-          {['All Posts', 'Offering', 'Seeking', 'Questions'].map((tab, i) => (
+          {[
+            { label: 'All Posts', value: 'all'      },
+            { label: 'Offering',  value: 'offering'  },
+            { label: 'Seeking',   value: 'seeking'   },
+            { label: 'Questions', value: 'question'  },
+          ].map(tab => (
             <button
-              key={tab}
+              key={tab.value}
+              onClick={() => setActiveTab(tab.value)}
               className={`
                 flex-1 py-1.5 rounded-lg text-xs font-medium
                 transition-colors
-                ${i === 0
+                ${activeTab === tab.value
                   ? 'bg-surface2 text-white'
                   : 'text-muted hover:text-white'
                 }
               `}
             >
-              {tab}
+              {tab.label}
             </button>
           ))}
         </div>
@@ -131,7 +142,8 @@ export default function Feed() {
               </div>
             ))}
           </div>
-        ) : posts.length === 0 ? (
+
+        ) : filteredPosts.length === 0 ? (
           <div className="
             text-center py-16
             bg-surface border border-border
@@ -142,12 +154,16 @@ export default function Feed() {
               No posts yet
             </p>
             <p className="text-sm text-muted">
-              Be the first to post something.
+              {activeTab === 'all'
+                ? 'Be the first to post something.'
+                : `No ${activeTab} posts yet.`
+              }
             </p>
           </div>
+
         ) : (
           <div className="flex flex-col gap-4">
-            {posts.map(post => (
+            {filteredPosts.map(post => (
               <PostCard
                 key={post.id}
                 post={post}
