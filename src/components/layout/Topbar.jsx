@@ -1,16 +1,49 @@
+import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
+import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../hooks/useAuth'
 
 export default function Topbar() {
-  const { profile, signOut } = useAuth()
+  const { profile: authProfile, signOut } = useAuth()
   const navigate = useNavigate()
+
+  const [unreadCount, setUnreadCount] = useState(0)
+
+  useEffect(() => {
+    if (!authProfile) return
+
+    fetchUnreadCount()
+
+    const channel = supabase
+      .channel('notifications')
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'notifications',
+        filter: `user_id=eq.${authProfile.id}`,
+      }, () => {
+        fetchUnreadCount()
+      })
+      .subscribe()
+
+    return () => supabase.removeChannel(channel)
+  }, [authProfile])
+
+  async function fetchUnreadCount() {
+    if (!authProfile) return
+    const { count } = await supabase
+      .from('notifications')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', authProfile.id)
+      .eq('is_read', false)
+    setUnreadCount(count || 0)
+  }
 
   async function handleSignOut() {
     await signOut()
     navigate('/login')
   }
 
-  // get initials from full name
   function getInitials(name) {
     if (!name) return '?'
     return name
@@ -57,27 +90,39 @@ export default function Topbar() {
       <div className="ml-auto flex items-center gap-2">
 
         {/* Notifications */}
-        <button className="
-          w-9 h-9 flex items-center justify-center
-          bg-surface2 border border-border
-          rounded-lg text-base hover:border-muted
-          transition-colors relative
-        ">
+        <button
+          onClick={() => navigate('/notifications')}
+          className="
+            w-9 h-9 flex items-center justify-center
+            bg-surface2 border border-border
+            rounded-lg text-base hover:border-muted
+            transition-colors relative
+          "
+        >
           🔔
-          {/* notification dot */}
-          <span className="
-            absolute top-1.5 right-1.5
-            w-2 h-2 bg-accent rounded-full
-          "/>
+          {unreadCount > 0 && (
+            <span className="
+              absolute -top-1 -right-1
+              min-w-4 h-4 px-1
+              bg-accent text-black
+              font-display font-bold text-xs
+              rounded-full flex items-center justify-center
+            ">
+              {unreadCount > 9 ? '9+' : unreadCount}
+            </span>
+          )}
         </button>
 
         {/* Messages */}
-        <button className="
-          w-9 h-9 flex items-center justify-center
-          bg-surface2 border border-border
-          rounded-lg text-base hover:border-muted
-          transition-colors
-        ">
+        <button
+          onClick={() => navigate('/messages')}
+          className="
+            w-9 h-9 flex items-center justify-center
+            bg-surface2 border border-border
+            rounded-lg text-base hover:border-muted
+            transition-colors
+          "
+        >
           💬
         </button>
 
@@ -90,7 +135,7 @@ export default function Topbar() {
             font-display font-bold text-sm text-white
             cursor-pointer
           ">
-            {getInitials(profile?.full_name)}
+            {getInitials(authProfile?.full_name)}
           </button>
 
           {/* Dropdown */}
@@ -105,15 +150,15 @@ export default function Topbar() {
           ">
             <div className="px-4 py-3 border-b border-border">
               <p className="text-sm font-medium text-white truncate">
-                {profile?.full_name}
+                {authProfile?.full_name}
               </p>
               <p className="text-xs text-muted truncate">
-                @{profile?.username}
+                @{authProfile?.username}
               </p>
             </div>
 
             <Link
-              to={`/profile/${profile?.username}`}
+              to={`/profile/${authProfile?.username}`}
               className="
                 flex items-center gap-2 px-4 py-2.5
                 text-sm text-muted hover:text-white
@@ -121,6 +166,48 @@ export default function Topbar() {
               "
             >
               👤 My Profile
+            </Link>
+
+            <Link
+              to="/profile/edit"
+              className="
+                flex items-center gap-2 px-4 py-2.5
+                text-sm text-muted hover:text-white
+                hover:bg-surface2 transition-colors
+              "
+            >
+              ✏️ Edit Profile
+            </Link>
+
+            <Link
+              to="/jobs"
+              className="
+                flex items-center gap-2 px-4 py-2.5
+                text-sm text-muted hover:text-white
+                hover:bg-surface2 transition-colors
+              "
+            >
+              📋 My Jobs
+            </Link>
+
+            <Link
+              to="/notifications"
+              className="
+                flex items-center gap-2 px-4 py-2.5
+                text-sm text-muted hover:text-white
+                hover:bg-surface2 transition-colors
+              "
+            >
+              🔔 Notifications
+              {unreadCount > 0 && (
+                <span className="
+                  ml-auto bg-accent text-black
+                  font-display font-bold text-xs
+                  px-1.5 py-0.5 rounded-full
+                ">
+                  {unreadCount}
+                </span>
+              )}
             </Link>
 
             <button

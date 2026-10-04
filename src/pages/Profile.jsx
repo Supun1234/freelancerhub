@@ -201,10 +201,12 @@ Promise.all([
 
               <div className="flex gap-2 mt-8">
                 {isOwnProfile ? (
-                  <button className="
-                    px-4 py-2 bg-surface2 border border-border
-                    text-white font-display font-bold text-xs
-                    rounded-xl hover:border-muted transition-colors
+                  <button 
+                    onClick={() => navigate('/profile/edit')}
+                    className="
+                     px-4 py-2 bg-surface2 border border-border
+                     text-white font-display font-bold text-xs
+                     rounded-xl hover:border-muted transition-colors
                   ">
                     ✏️ Edit Profile
                   </button>
