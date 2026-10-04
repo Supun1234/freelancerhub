@@ -84,13 +84,18 @@ export default function Profile() {
         .eq('user_id', profileData.id),
 
       // completed jobs
+      // completed jobs
       supabase
         .from('jobs')
-        .select('*')
+        .select(`
+         *,
+         freelancer:freelancer_id ( full_name, username ),
+         client:client_id ( full_name, username )
+         `)
         .or(`freelancer_id.eq.${profileData.id},client_id.eq.${profileData.id}`)
         .eq('status', 'completed')
-        .order('completed_at', { ascending: false })
-        .limit(5),
+        .order('created_at', { ascending: false })
+        .limit(10),
     ])
 
     setPosts(postsRes.data || [])
@@ -255,7 +260,7 @@ export default function Profile() {
             <div className="grid grid-cols-4 gap-3 mb-4">
               {[
                 { num: profile.total_jobs,    label: 'Jobs Done'   },
-                { num: profile.avg_rating?.toFixed(1) || '—', label: 'Avg Rating' },
+                { num: profile.avg_rating > 0 ? profile.avg_rating?.toFixed(1) : '—', label: 'Avg Rating' },
                 { num: profile.total_reviews, label: 'Reviews'     },
                 { num: posts.length,          label: 'Posts'       },
               ].map(stat => (
@@ -460,46 +465,66 @@ export default function Profile() {
         )}
 
         {/* Jobs tab */}
-        {activeTab === 'jobs' && (
-          <div className="flex flex-col gap-3">
-            {jobs.length === 0 ? (
-              <div className="text-center py-12 bg-surface border border-border rounded-2xl">
-                <p className="text-3xl mb-2">📋</p>
-                <p className="text-muted text-sm">No completed jobs yet.</p>
+{activeTab === 'jobs' && (
+  <div className="flex flex-col gap-3">
+    {jobs.length === 0 ? (
+      <div className="text-center py-12 bg-surface border border-border rounded-2xl">
+        <p className="text-3xl mb-2">📋</p>
+        <p className="text-muted text-sm">No completed jobs yet.</p>
+      </div>
+    ) : (
+      jobs.map(job => {
+        const isFreelancer = job.freelancer_id === profile.id
+        const other = isFreelancer ? job.client : job.freelancer
+        return (
+          <div
+            key={job.id}
+            className="bg-surface border border-border rounded-2xl p-4"
+          >
+            <div className="flex items-start justify-between gap-3 mb-2">
+              <div className="flex-1">
+                <h3 className="font-display font-bold text-sm text-white mb-1">
+                  {job.title}
+                </h3>
+                {job.description && (
+                  <p className="text-xs text-muted leading-relaxed">
+                    {job.description}
+                  </p>
+                )}
               </div>
-            ) : (
-              jobs.map(job => (
-                <div
-                  key={job.id}
-                  className="bg-surface border border-border rounded-2xl p-4"
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <h3 className="font-display font-bold text-sm text-white mb-1">
-                        {job.title}
-                      </h3>
-                      {job.description && (
-                        <p className="text-xs text-muted">{job.description}</p>
-                      )}
-                    </div>
-                    <span className="
-                      shrink-0 px-2.5 py-1 rounded-lg text-xs
-                      font-display font-bold
-                      bg-accent2/10 text-accent2 border border-accent2/20
-                    ">
-                      Completed
-                    </span>
-                  </div>
-                  {job.completed_at && (
-                    <p className="text-xs text-muted mt-2">
-                      {timeAgo(job.completed_at)}
-                    </p>
-                  )}
-                </div>
-              ))
-            )}
+              <span className="
+                shrink-0 px-2.5 py-1 rounded-lg text-xs
+                font-display font-bold
+                bg-accent2/10 text-accent2 border border-accent2/20
+              ">
+                Completed
+              </span>
+            </div>
+
+            <div className="flex items-center gap-3 mt-3 pt-3 border-t border-border">
+              <span className="text-xs text-muted">
+                {isFreelancer ? '👤 Client:' : '🛠️ Freelancer:'}
+              </span>
+              <span className="text-xs text-white font-medium">
+                {other?.full_name}
+              </span>
+              {job.location && (
+                <>
+                  <span className="text-muted">·</span>
+                  <span className="text-xs text-muted">📍 {job.location}</span>
+                </>
+              )}
+              <span className="text-muted">·</span>
+              <span className="text-xs text-muted">
+                {timeAgo(job.completed_at || job.created_at)}
+              </span>
+            </div>
           </div>
-        )}
+        )
+      })
+    )}
+  </div>
+)}
 
       </div>
       {showJobRequest && (
