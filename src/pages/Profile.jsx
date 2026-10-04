@@ -83,19 +83,37 @@ export default function Profile() {
         .select('circles(name, color, icon)')
         .eq('user_id', profileData.id),
 
+      
       // completed jobs
-      // completed jobs
-      supabase
-        .from('jobs')
-        .select(`
-         *,
-         freelancer:freelancer_id ( full_name, username ),
-         client:client_id ( full_name, username )
-         `)
-        .or(`freelancer_id.eq.${profileData.id},client_id.eq.${profileData.id}`)
-        .eq('status', 'completed')
-        .order('created_at', { ascending: false })
-        .limit(10),
+// completed jobs — fetch both sides separately then merge
+Promise.all([
+  supabase
+    .from('jobs')
+    .select(`
+      *,
+      freelancer:freelancer_id ( full_name, username ),
+      client:client_id ( full_name, username )
+    `)
+    .eq('freelancer_id', profileData.id)
+    .eq('status', 'completed')
+    .order('created_at', { ascending: false }),
+
+  supabase
+    .from('jobs')
+    .select(`
+      *,
+      freelancer:freelancer_id ( full_name, username ),
+      client:client_id ( full_name, username )
+    `)
+    .eq('client_id', profileData.id)
+    .eq('status', 'completed')
+    .order('created_at', { ascending: false }),
+]).then(([freelancerJobs, clientJobs]) => ({
+  data: [
+    ...(freelancerJobs.data || []),
+    ...(clientJobs.data || []),
+  ]
+})),
     ])
 
     setPosts(postsRes.data || [])
