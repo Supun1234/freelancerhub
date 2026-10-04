@@ -3,7 +3,7 @@ import { Link, useLocation } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../hooks/useAuth'
 
-export default function Sidebar({ open, onClose }) {
+export default function Sidebar({ open, onClose, onCircleChange }) {
   const { user, profile } = useAuth()
   const location = useLocation()
 
@@ -33,24 +33,27 @@ export default function Sidebar({ open, onClose }) {
     setMyCircles(data?.map(d => d.circle_id) || [])
   }
 
-  async function toggleCircle(circleId) {
-    const joined = myCircles.includes(circleId)
-    if (joined) {
-      await supabase
-        .from('user_circles')
-        .delete()
-        .eq('user_id', user.id)
-        .eq('circle_id', circleId)
-      await supabase.rpc('decrement_member_count', { circle_id: circleId })
-      setMyCircles(myCircles.filter(id => id !== circleId))
-    } else {
-      await supabase
-        .from('user_circles')
-        .insert({ user_id: user.id, circle_id: circleId })
-      await supabase.rpc('increment_member_count', { circle_id: circleId })
-      setMyCircles([...myCircles, circleId])
-    }
+async function toggleCircle(circleId) {
+  const joined = myCircles.includes(circleId)
+  if (joined) {
+    await supabase
+      .from('user_circles')
+      .delete()
+      .eq('user_id', user.id)
+      .eq('circle_id', circleId)
+    await supabase.rpc('decrement_member_count', { circle_id: circleId })
+    setMyCircles(myCircles.filter(id => id !== circleId))
+  } else {
+    await supabase
+      .from('user_circles')
+      .insert({ user_id: user.id, circle_id: circleId })
+    await supabase.rpc('increment_member_count', { circle_id: circleId })
+    setMyCircles([...myCircles, circleId])
   }
+
+  // notify parent that circles changed
+  if (onCircleChange) onCircleChange()
+}
 
   const navItems = [
     { icon: '🏠', label: 'My Feed',       path: '/feed'          },

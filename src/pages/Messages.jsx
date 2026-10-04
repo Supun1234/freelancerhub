@@ -119,29 +119,39 @@ export default function Messages() {
     return () => supabase.removeChannel(channel)
   }
 
-  async function handleSend(e) {
-    e.preventDefault()
-    if (!newMessage.trim() || !selectedJob) return
+async function handleSend(e) {
+  e.preventDefault()
+  if (!newMessage.trim() || !selectedJob) return
 
-    setSending(true)
+  setSending(true)
 
-    const isFreelancer = selectedJob.freelancer_id === user.id
-    const receiverId   = isFreelancer
-      ? selectedJob.client_id
-      : selectedJob.freelancer_id
+  const isFreelancer = selectedJob.freelancer_id === user.id
+  const receiverId   = isFreelancer
+    ? selectedJob.client_id
+    : selectedJob.freelancer_id
 
-    await supabase
-      .from('messages')
-      .insert({
-        job_id:      selectedJob.id,
-        sender_id:   user.id,
-        receiver_id: receiverId,
-        body:        newMessage.trim(),
-      })
+  await supabase
+    .from('messages')
+    .insert({
+      job_id:      selectedJob.id,
+      sender_id:   user.id,
+      receiver_id: receiverId,
+      body:        newMessage.trim(),
+    })
 
-    setNewMessage('')
-    setSending(false)
-  }
+  // notify receiver
+  await supabase
+    .from('notifications')
+    .insert({
+      user_id:      receiverId,
+      type:         'new_message',
+      reference_id: selectedJob.id,
+      body:         `New message about "${selectedJob.title}" — "${newMessage.trim().slice(0, 40)}..."`,
+    })
+
+  setNewMessage('')
+  setSending(false)
+}
 
   function getInitials(name) {
     if (!name) return '?'

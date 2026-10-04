@@ -61,39 +61,49 @@ export default function PostCard({ post, onUpdate }) {
   }
 
   // handle like
-  async function handleLike() {
-    if (!user) return
+async function handleLike() {
+  if (!user) return
 
-    if (liked) {
-      // unlike
+  if (liked) {
+    await supabase
+      .from('post_likes')
+      .delete()
+      .eq('post_id', post.id)
+      .eq('user_id', user.id)
+
+    await supabase
+      .from('posts')
+      .update({ like_count: likeCount - 1 })
+      .eq('id', post.id)
+
+    setLiked(false)
+    setLikeCount(prev => prev - 1)
+  } else {
+    await supabase
+      .from('post_likes')
+      .insert({ post_id: post.id, user_id: user.id })
+
+    await supabase
+      .from('posts')
+      .update({ like_count: likeCount + 1 })
+      .eq('id', post.id)
+
+    setLiked(true)
+    setLikeCount(prev => prev + 1)
+
+    // notify post owner — only if not your own post
+    if (post.user_id !== user.id) {
       await supabase
-        .from('post_likes')
-        .delete()
-        .eq('post_id', post.id)
-        .eq('user_id', user.id)
-
-      await supabase
-        .from('posts')
-        .update({ like_count: likeCount - 1 })
-        .eq('id', post.id)
-
-      setLiked(false)
-      setLikeCount(prev => prev - 1)
-    } else {
-      // like
-      await supabase
-        .from('post_likes')
-        .insert({ post_id: post.id, user_id: user.id })
-
-      await supabase
-        .from('posts')
-        .update({ like_count: likeCount + 1 })
-        .eq('id', post.id)
-
-      setLiked(true)
-      setLikeCount(prev => prev + 1)
+        .from('notifications')
+        .insert({
+          user_id:      post.user_id,
+          type:         'post_like',
+          reference_id: post.id,
+          body:         `Someone liked your post — "${post.title || post.body.slice(0, 40)}..."`,
+        })
     }
   }
+}
 
   // load comments
   async function handleToggleComments() {
@@ -115,34 +125,45 @@ export default function PostCard({ post, onUpdate }) {
   }
 
   // submit comment
-  async function handleComment(e) {
-    e.preventDefault()
-    if (!commentText.trim() || !user) return
+async function handleComment(e) {
+  e.preventDefault()
+  if (!commentText.trim() || !user) return
 
-    const { data, error } = await supabase
-      .from('comments')
-      .insert({
-        post_id: post.id,
-        user_id: user.id,
-        body: commentText.trim(),
-      })
-      .select(`
-        *,
-        users ( full_name, username, avatar_url )
-      `)
-      .single()
+  const { data, error } = await supabase
+    .from('comments')
+    .insert({
+      post_id: post.id,
+      user_id: user.id,
+      body:    commentText.trim(),
+    })
+    .select(`
+      *,
+      users ( full_name, username, avatar_url )
+    `)
+    .single()
 
-    if (!error) {
-      setComments([...comments, data])
-      setCommentText('')
+  if (!error) {
+    setComments([...comments, data])
+    setCommentText('')
 
-      // update comment count
+    await supabase
+      .from('posts')
+      .update({ comment_count: post.comment_count + 1 })
+      .eq('id', post.id)
+
+    // notify post owner — only if not your own post
+    if (post.user_id !== user.id) {
       await supabase
-        .from('posts')
-        .update({ comment_count: post.comment_count + 1 })
-        .eq('id', post.id)
+        .from('notifications')
+        .insert({
+          user_id:      post.user_id,
+          type:         'post_comment',
+          reference_id: post.id,
+          body:         `Someone commented on your post — "${commentText.trim().slice(0, 40)}..."`,
+        })
     }
   }
+}
 
   return (
     <div className="

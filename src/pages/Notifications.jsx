@@ -42,25 +42,29 @@ export default function Notifications() {
       .eq('is_read', false)
   }
 
-  async function handleClick(notification) {
-    // navigate based on type
-    if (
-      notification.type === 'job_request' ||
-      notification.type === 'job_accepted' ||
-      notification.type === 'job_completed'
-    ) {
-      navigate('/jobs')
-    } else if (
-      notification.type === 'review_visible' ||
-      notification.type === 'review_pending'
-    ) {
-      navigate('/jobs')
-    } else if (notification.type === 'post_like') {
-      navigate('/feed')
-    } else {
-      navigate('/feed')
-    }
+async function handleClick(notification) {
+  if (
+    notification.type === 'job_request' ||
+    notification.type === 'job_accepted' ||
+    notification.type === 'job_completed'
+  ) {
+    navigate('/jobs')
+  } else if (
+    notification.type === 'review_visible' ||
+    notification.type === 'review_pending'
+  ) {
+    navigate('/jobs')
+  } else if (notification.type === 'new_message') {
+    navigate('/messages')
+  } else if (
+    notification.type === 'post_like' ||
+    notification.type === 'post_comment'
+  ) {
+    navigate('/feed')
+  } else {
+    navigate('/feed')
   }
+}
 
   function timeAgo(dateStr) {
     if (!dateStr) return ''
@@ -71,15 +75,17 @@ export default function Notifications() {
     return `${Math.floor(diff / 86400)}d ago`
   }
 
-  const typeConfig = {
-    job_request:   { icon: '📋', color: 'text-accent'  },
-    job_accepted:  { icon: '✅', color: 'text-accent2' },
-    job_completed: { icon: '🎉', color: 'text-accent2' },
-    review_visible:{ icon: '⭐', color: 'text-accent'  },
-    review_pending:{ icon: '🔒', color: 'text-muted'   },
-    post_like:     { icon: '❤️', color: 'text-danger'  },
-    default:       { icon: '🔔', color: 'text-muted'   },
-  }
+const typeConfig = {
+  job_request:   { icon: '📋', color: 'text-accent'  },
+  job_accepted:  { icon: '✅', color: 'text-accent2' },
+  job_completed: { icon: '🎉', color: 'text-accent2' },
+  review_visible:{ icon: '⭐', color: 'text-accent'  },
+  review_pending:{ icon: '🔒', color: 'text-muted'   },
+  post_like:     { icon: '❤️', color: 'text-danger'  },
+  post_comment:  { icon: '💬', color: 'text-accent2' },
+  new_message:   { icon: '✉️', color: 'text-blue-400'},
+  default:       { icon: '🔔', color: 'text-muted'   },
+}
 
   if (loading) return (
     <div className="min-h-screen bg-bg flex items-center justify-center">
