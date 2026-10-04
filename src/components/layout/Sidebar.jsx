@@ -3,14 +3,13 @@ import { Link, useLocation } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../hooks/useAuth'
 
-export default function Sidebar() {
-  
+export default function Sidebar({ open, onClose }) {
+  const { user, profile } = useAuth()
   const location = useLocation()
 
   const [circles, setCircles]     = useState([])
   const [myCircles, setMyCircles] = useState([])
   const [loading, setLoading]     = useState(true)
-  const { user, profile } = useAuth()
 
   useEffect(() => {
     fetchCircles()
@@ -36,43 +35,55 @@ export default function Sidebar() {
 
   async function toggleCircle(circleId) {
     const joined = myCircles.includes(circleId)
-
     if (joined) {
       await supabase
         .from('user_circles')
         .delete()
         .eq('user_id', user.id)
         .eq('circle_id', circleId)
-
       await supabase.rpc('decrement_member_count', { circle_id: circleId })
-
       setMyCircles(myCircles.filter(id => id !== circleId))
     } else {
       await supabase
         .from('user_circles')
         .insert({ user_id: user.id, circle_id: circleId })
-
       await supabase.rpc('increment_member_count', { circle_id: circleId })
-
       setMyCircles([...myCircles, circleId])
     }
   }
 
   const navItems = [
-    { icon: '🏠', label: 'My Feed',  path: '/feed' },
-    { icon: '🔍', label: 'Search',  path: '/search' },
-    { icon: '📋', label: 'My Jobs',  path: '/jobs' },
-    { icon: '💬', label: 'Messages', path: '/messages' },
-    { icon: '⭐', label: 'Reviews',  path: '/reviews' },
-    { icon: '👤', label: 'Profile',  path: '/profile/${profile?.username}' },
+    { icon: '🏠', label: 'My Feed',       path: '/feed'          },
+    { icon: '🔍', label: 'Search',         path: '/search'        },
+    { icon: '📋', label: 'My Jobs',        path: '/jobs'          },
+    { icon: '💬', label: 'Messages',       path: '/messages'      },
+    { icon: '🔔', label: 'Notifications',  path: '/notifications' },
+    { icon: '👤', label: 'Profile',        path: `/profile/${profile?.username}` },
   ]
 
   return (
-    <aside className="
+    <aside className={`
       fixed left-0 top-14 bottom-0
       w-56 bg-surface border-r border-border
       overflow-y-auto py-4 px-2
-    ">
+      z-40 transition-transform duration-200
+      ${open ? 'translate-x-0' : '-translate-x-full'}
+      lg:translate-x-0
+    `}>
+
+      {/* Close button — mobile only */}
+      <button
+        onClick={onClose}
+        className="
+          lg:hidden
+          absolute top-3 right-3
+          w-7 h-7 flex items-center justify-center
+          text-muted hover:text-white
+          bg-surface2 rounded-lg text-sm
+        "
+      >
+        ✕
+      </button>
 
       {/* Main Nav */}
       <nav className="flex flex-col gap-0.5 mb-4">
@@ -82,6 +93,7 @@ export default function Sidebar() {
             <Link
               key={item.path}
               to={item.path}
+              onClick={onClose}
               className={`
                 flex items-center gap-2.5 px-3 py-2.5
                 rounded-lg text-sm transition-colors
@@ -126,7 +138,6 @@ export default function Sidebar() {
                   `}
                   onClick={() => toggleCircle(circle.id)}
                 >
-                  {/* color dot */}
                   <span
                     className={`
                       w-2 h-2 rounded-full shrink-0 transition-all
@@ -134,8 +145,6 @@ export default function Sidebar() {
                     `}
                     style={{ background: circle.color }}
                   />
-
-                  {/* circle name */}
                   <span className={`
                     text-sm flex-1 truncate transition-colors
                     ${joined
@@ -145,8 +154,6 @@ export default function Sidebar() {
                   `}>
                     {circle.icon} {circle.name}
                   </span>
-
-                  {/* joined checkmark */}
                   {joined && (
                     <span className="text-xs text-accent2 font-bold">✓</span>
                   )}
@@ -159,7 +166,6 @@ export default function Sidebar() {
 
       <div className="border-t border-border my-3" />
 
-      {/* Footer */}
       <div className="px-3">
         <p className="text-xs text-muted leading-relaxed">
           FreelancerHub — built for Sri Lanka's skilled community.

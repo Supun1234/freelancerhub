@@ -86,7 +86,7 @@ export default function Feed() {
 
   return (
     <AppLayout>
-      <div className="max-w-2xl mx-auto py-6 px-4">
+      <div className="max-w-2xl mx-auto py-4 sm:py-6 px-3 sm:px-4">
 
         {/* Composer */}
         <PostComposer

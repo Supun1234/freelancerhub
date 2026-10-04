@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../hooks/useAuth'
 
-export default function Topbar() {
+export default function Topbar({ onMenuClick }) {
   const { profile: authProfile, signOut } = useAuth()
   const navigate = useNavigate()
 
@@ -67,28 +67,43 @@ export default function Topbar() {
         <span className="text-accent2">Hub</span>
       </Link>
 
-      {/* Search bar */}
+      {/* Burger menu — mobile only */}
+      <button
+        onClick={onMenuClick}
+        className="
+          lg:hidden
+          w-9 h-9 flex items-center justify-center
+          bg-surface2 border border-border
+          rounded-lg text-base hover:border-muted
+          transition-colors
+        "
+      >
+        ☰
+      </button>
+
+      {/* Search bar — hidden on mobile */}
       <div className="
+        hidden sm:flex
         flex-1 max-w-md ml-4
-        flex items-center gap-2
+        items-center gap-2
         bg-surface2 border border-border
         rounded-lg px-3 py-2
       ">
         <span className="text-muted text-sm">🔍</span>
-<input
-  type="text"
-  placeholder="Search skills, people, circles..."
-  onKeyDown={e => {
-    if (e.key === 'Enter' && e.target.value.trim()) {
-      navigate(`/search?q=${encodeURIComponent(e.target.value.trim())}`)
-    }
-  }}
-  className="
-    bg-transparent flex-1 text-sm
-    text-white placeholder-muted
-    outline-none
-  "
-/>
+        <input
+          type="text"
+          placeholder="Search skills, people, circles..."
+          onKeyDown={e => {
+            if (e.key === 'Enter' && e.target.value.trim()) {
+              navigate(`/search?q=${encodeURIComponent(e.target.value.trim())}`)
+            }
+          }}
+          className="
+            bg-transparent flex-1 text-sm
+            text-white placeholder-muted
+            outline-none
+          "
+        />
       </div>
 
       {/* Right side */}

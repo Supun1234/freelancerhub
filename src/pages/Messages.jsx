@@ -27,7 +27,8 @@ export default function Messages() {
   useEffect(() => {
     if (selectedJob) {
       fetchMessages(selectedJob.id)
-      subscribeToMessages(selectedJob.id)
+      const unsub = subscribeToMessages(selectedJob.id)
+      return unsub
     }
   }, [selectedJob])
 
@@ -37,17 +38,48 @@ export default function Messages() {
 
   async function fetchJobs() {
     setFetching(true)
-    const { data } = await supabase
-      .from('jobs')
-      .select(`
-        *,
-        freelancer:freelancer_id ( id, full_name, username ),
-        client:client_id ( id, full_name, username )
-      `)
-      .or(`freelancer_id.eq.${user.id},client_id.eq.${user.id}`)
-      .in('status', ['pending', 'confirmed', 'completed'])
-      .order('created_at', { ascending: false })
-    setJobs(data || [])
+
+    const [freelancerRes, clientRes] = await Promise.all([
+      supabase
+        .from('jobs')
+        .select(`
+          *,
+          freelancer:freelancer_id ( id, full_name, username ),
+          client:client_id ( id, full_name, username )
+        `)
+        .eq('freelancer_id', user.id)
+        .in('status', ['pending', 'confirmed', 'completed'])
+        .order('created_at', { ascending: false }),
+
+      supabase
+        .from('jobs')
+        .select(`
+          *,
+          freelancer:freelancer_id ( id, full_name, username ),
+          client:client_id ( id, full_name, username )
+        `)
+        .eq('client_id', user.id)
+        .in('status', ['pending', 'confirmed', 'completed'])
+        .order('created_at', { ascending: false }),
+    ])
+
+    const all  = [
+      ...(freelancerRes.data || []),
+      ...(clientRes.data    || []),
+    ]
+
+    // deduplicate
+    const seen = new Set()
+    const merged = all.filter(j => {
+      if (seen.has(j.id)) return false
+      seen.add(j.id)
+      return true
+    })
+
+    // sort by created_at
+    merged.sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+
+    setJobs(merged)
     setFetching(false)
   }
 
@@ -62,7 +94,7 @@ export default function Messages() {
       .order('created_at', { ascending: true })
     setMessages(data || [])
 
-    // mark messages as read
+    // mark as read
     await supabase
       .from('messages')
       .update({ is_read: true })
@@ -125,6 +157,12 @@ export default function Messages() {
     return `${Math.floor(diff / 86400)}d ago`
   }
 
+  const statusConfig = {
+    pending:   { label: '● Pending',   color: 'text-accent'  },
+    confirmed: { label: '● Active',    color: 'text-blue-400' },
+    completed: { label: '✓ Completed', color: 'text-accent2' },
+  }
+
   if (loading) return (
     <div className="min-h-screen bg-bg flex items-center justify-center">
       <p className="text-muted">Loading...</p>
@@ -136,18 +174,18 @@ export default function Messages() {
       <div className="flex h-[calc(100vh-56px)]">
 
         {/* Jobs list — left panel */}
-        <div className="
-          w-72 shrink-0
+        <div className={`
+          w-full sm:w-72 shrink-0
           border-r border-border
-          overflow-y-auto
-          flex flex-col
-        ">
+          overflow-y-auto flex flex-col
+          ${selectedJob ? 'hidden sm:flex' : 'flex'}
+        `}>
           <div className="p-4 border-b border-border">
             <h1 className="font-display font-bold text-base text-white">
               Messages
             </h1>
             <p className="text-xs text-muted mt-0.5">
-              Messages are tied to confirmed jobs
+              Tied to your job requests
             </p>
           </div>
 
@@ -164,21 +202,26 @@ export default function Messages() {
               ))}
             </div>
           ) : jobs.length === 0 ? (
-            <div className="flex-1 flex flex-col items-center justify-center p-6 text-center">
+            <div className="
+              flex-1 flex flex-col
+              items-center justify-center
+              p-6 text-center
+            ">
               <p className="text-3xl mb-2">💬</p>
               <p className="text-sm font-display font-bold text-white mb-1">
                 No messages yet
               </p>
               <p className="text-xs text-muted">
-                Messages open when a job is confirmed.
+                Messages open when a job request is sent.
               </p>
             </div>
           ) : (
             <div className="flex flex-col">
               {jobs.map(job => {
                 const isFreelancer = job.freelancer_id === user.id
-                const other = isFreelancer ? job.client : job.freelancer
-                const isSelected = selectedJob?.id === job.id
+                const other        = isFreelancer ? job.client : job.freelancer
+                const isSelected   = selectedJob?.id === job.id
+                const status       = statusConfig[job.status] || statusConfig.pending
 
                 return (
                   <div
@@ -209,22 +252,9 @@ export default function Messages() {
                       <p className="text-xs text-muted truncate mt-0.5">
                         {job.title}
                       </p>
-                      <span className={`
-  text-xs font-display font-bold
-  ${job.status === 'completed'
-    ? 'text-accent2'
-    : job.status === 'pending'
-    ? 'text-accent'
-    : 'text-blue-400'
-  }
-`}>
-  {job.status === 'completed'
-    ? '✓ Completed'
-    : job.status === 'pending'
-    ? '● Pending'
-    : '● Active'
-  }
-</span>
+                      <span className={`text-xs font-display font-bold ${status.color}`}>
+                        {status.label}
+                      </span>
                     </div>
                   </div>
                 )
@@ -233,9 +263,9 @@ export default function Messages() {
           )}
         </div>
 
-        {/* Chat panel — right */}
+        {/* Chat panel */}
         {!selectedJob ? (
-          <div className="flex-1 flex flex-col items-center justify-center text-center p-8">
+          <div className="hidden sm:flex flex-1 flex-col items-center justify-center text-center p-8">
             <p className="text-5xl mb-4">💬</p>
             <p className="font-display font-bold text-xl text-white mb-2">
               Select a conversation
@@ -245,7 +275,12 @@ export default function Messages() {
             </p>
           </div>
         ) : (
-          <div className="flex-1 flex flex-col">
+          <div className="
+            flex-1 flex flex-col
+            fixed inset-0 sm:relative
+            bg-bg sm:bg-transparent
+            z-50 sm:z-auto
+          ">
 
             {/* Chat header */}
             {(() => {
@@ -254,10 +289,25 @@ export default function Messages() {
               return (
                 <div className="
                   flex items-center gap-3
-                  px-5 py-3
+                  px-4 py-3
                   border-b border-border
                   bg-surface
+                  mt-14 sm:mt-0
                 ">
+                  {/* Back button mobile */}
+                  <button
+                    onClick={() => setSelectedJob(null)}
+                    className="
+                      sm:hidden w-8 h-8
+                      flex items-center justify-center
+                      text-muted hover:text-white
+                      bg-surface2 rounded-lg
+                      transition-colors shrink-0
+                    "
+                  >
+                    ←
+                  </button>
+
                   <div className="
                     w-9 h-9 rounded-xl shrink-0
                     bg-gradient-to-br from-accent to-danger
@@ -266,18 +316,20 @@ export default function Messages() {
                   ">
                     {getInitials(other?.full_name)}
                   </div>
-                  <div>
-                    <p className="font-display font-bold text-sm text-white">
+
+                  <div className="flex-1 min-w-0">
+                    <p className="font-display font-bold text-sm text-white truncate">
                       {other?.full_name}
                     </p>
-                    <p className="text-xs text-muted">
+                    <p className="text-xs text-muted truncate">
                       Re: {selectedJob.title}
                     </p>
                   </div>
+
                   <button
                     onClick={() => navigate('/jobs')}
                     className="
-                      ml-auto px-3 py-1.5
+                      shrink-0 px-3 py-1.5
                       bg-surface2 border border-border
                       text-xs text-muted hover:text-white
                       rounded-lg transition-colors
@@ -290,7 +342,7 @@ export default function Messages() {
             })()}
 
             {/* Messages */}
-            <div className="flex-1 overflow-y-auto p-5 flex flex-col gap-3">
+            <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-3">
               {messages.length === 0 && (
                 <div className="text-center py-8">
                   <p className="text-muted text-sm">
@@ -300,7 +352,7 @@ export default function Messages() {
               )}
 
               {messages.map((msg, i) => {
-                const isMine = msg.sender_id === user.id
+                const isMine   = msg.sender_id === user.id
                 const showTime = i === 0 ||
                   new Date(msg.created_at) - new Date(messages[i-1].created_at) > 300000
 
@@ -313,8 +365,9 @@ export default function Messages() {
                     )}
                     <div className={`flex ${isMine ? 'justify-end' : 'justify-start'}`}>
                       <div className={`
-                        max-w-xs lg:max-w-md px-4 py-2.5
-                        rounded-2xl text-sm leading-relaxed
+                        max-w-xs lg:max-w-md
+                        px-4 py-2.5 rounded-2xl
+                        text-sm leading-relaxed
                         ${isMine
                           ? 'bg-accent2 text-black rounded-br-sm'
                           : 'bg-surface2 border border-border text-white rounded-bl-sm'
@@ -330,7 +383,7 @@ export default function Messages() {
             </div>
 
             {/* Message input */}
-            <div className="p-4 border-t border-border">
+            <div className="p-4 border-t border-border bg-surface">
               <form onSubmit={handleSend} className="flex gap-2">
                 <input
                   value={newMessage}

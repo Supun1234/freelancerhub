@@ -277,7 +277,7 @@ Promise.all([
             </div>
 
             {/* Stats */}
-            <div className="grid grid-cols-4 gap-3 mb-4">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
               {[
                 { num: profile.total_jobs,    label: 'Jobs Done'   },
                 { num: profile.avg_rating > 0 ? profile.avg_rating?.toFixed(1) : '—', label: 'Avg Rating' },
