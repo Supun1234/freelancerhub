@@ -10,10 +10,12 @@ export default function Feed() {
   const { user, loading } = useAuth()
   const navigate = useNavigate()
 
-  const [posts, setPosts]       = useState([])
-  const [circles, setCircles]   = useState([])
-  const [fetching, setFetching] = useState(true)
+  const [posts, setPosts]         = useState([])
+  const [circles, setCircles]     = useState([])
+  const [myCircles, setMyCircles] = useState([])
+  const [fetching, setFetching]   = useState(true)
   const [activeTab, setActiveTab] = useState('all')
+  const [browseAll, setBrowseAll] = useState(false)
 
   useEffect(() => {
     if (!loading && !user) navigate('/login')
@@ -21,10 +23,16 @@ export default function Feed() {
 
   useEffect(() => {
     if (user) {
-      fetchPosts()
       fetchCircles()
+      fetchMyCircles()
     }
   }, [user])
+
+  useEffect(() => {
+    if (user) {
+      fetchPosts()
+    }
+  }, [user, browseAll, myCircles])
 
   async function fetchCircles() {
     const { data } = await supabase
@@ -34,10 +42,18 @@ export default function Feed() {
     setCircles(data || [])
   }
 
+  async function fetchMyCircles() {
+    const { data } = await supabase
+      .from('user_circles')
+      .select('circle_id')
+      .eq('user_id', user.id)
+    setMyCircles(data?.map(c => c.circle_id) || [])
+  }
+
   async function fetchPosts() {
     setFetching(true)
 
-    const { data } = await supabase
+    let query = supabase
       .from('posts')
       .select(`
         *,
@@ -47,6 +63,14 @@ export default function Feed() {
       .eq('is_active', true)
       .order('created_at', { ascending: false })
       .limit(20)
+
+    // filter by joined circles if user has any
+    // and not browsing all
+    if (myCircles.length > 0 && !browseAll) {
+      query = query.in('circle_id', myCircles)
+    }
+
+    const { data } = await query
 
     if (data && data.length > 0) {
       const { data: likes } = await supabase
@@ -85,7 +109,7 @@ export default function Feed() {
   )
 
   return (
-    <AppLayout>
+    <AppLayout onCircleChange={fetchMyCircles}>
       <div className="max-w-2xl mx-auto py-4 sm:py-6 px-3 sm:px-4">
 
         {/* Composer */}
@@ -93,6 +117,25 @@ export default function Feed() {
           circles={circles}
           onPostCreated={handlePostCreated}
         />
+
+        {/* Browse all banner */}
+        {browseAll && (
+          <div className="
+            flex items-center justify-between
+            bg-accent/10 border border-accent/20
+            rounded-xl px-4 py-3 mb-4
+          ">
+            <p className="text-sm text-accent font-medium">
+              🌐 Showing all posts across FreelancerHub
+            </p>
+            <button
+              onClick={() => setBrowseAll(false)}
+              className="text-xs text-muted hover:text-white transition-colors"
+            >
+              Back to my circles
+            </button>
+          </div>
+        )}
 
         {/* Feed tabs */}
         <div className="
@@ -147,18 +190,44 @@ export default function Feed() {
           <div className="
             text-center py-16
             bg-surface border border-border
-            rounded-2xl
+            rounded-2xl px-6
           ">
-            <p className="text-4xl mb-3">🌱</p>
-            <p className="font-display font-bold text-white mb-1">
-              No posts yet
+            <p className="text-4xl mb-3">
+              {activeTab === 'all' ? '🌱' : '🔍'}
             </p>
-            <p className="text-sm text-muted">
+            <p className="font-display font-bold text-white mb-2">
               {activeTab === 'all'
-                ? 'Be the first to post something.'
-                : `No ${activeTab} posts yet.`
+                ? myCircles.length === 0
+                  ? 'No posts yet'
+                  : 'No posts in your circles'
+                : `No ${activeTab} posts in your circles`
               }
             </p>
+            <p className="text-sm text-muted mb-6">
+              {myCircles.length === 0
+                ? 'Join circles from the sidebar to see relevant posts.'
+                : activeTab === 'all'
+                ? 'Join more circles or browse all posts.'
+                : `No ${activeTab} posts in your circles yet.`
+              }
+            </p>
+            {activeTab === 'all' && (
+              <div className="flex flex-col gap-2 items-center">
+                <p className="text-xs text-muted">
+                  Browse all posts across the platform:
+                </p>
+                <button
+                  onClick={() => setBrowseAll(true)}
+                  className="
+                    px-5 py-2 bg-surface2 border border-border
+                    text-white font-display font-bold text-sm
+                    rounded-xl hover:border-muted transition-colors
+                  "
+                >
+                  Browse All Posts
+                </button>
+              </div>
+            )}
           </div>
 
         ) : (
