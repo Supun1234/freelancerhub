@@ -5,6 +5,7 @@ import Register from './pages/Register'
 import Feed     from './pages/Feed'
 import Profile  from './pages/Profile'
 import Jobs     from './pages/Jobs'
+import Review   from './pages/Review'
 
 function App() {
   return (
@@ -16,6 +17,7 @@ function App() {
         <Route path="/feed"              element={<Feed />} />
         <Route path="/profile/:username" element={<Profile />} />
         <Route path="/jobs"              element={<Jobs />} />
+        <Route path="/review/:jobId"     element={<Review />} />
       </Routes>
     </BrowserRouter>
   )
