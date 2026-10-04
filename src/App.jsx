@@ -9,6 +9,7 @@ import Review        from './pages/Review'
 import EditProfile   from './pages/EditProfile'
 import Notifications from './pages/Notifications'
 import Messages      from './pages/Messages'
+import Search        from './pages/Search'
 
 function App() {
   return (
@@ -24,6 +25,7 @@ function App() {
         <Route path="/review/:jobId"     element={<Review />} />
         <Route path="/notifications"     element={<Notifications />} />
         <Route path="/messages"          element={<Messages />} />
+        <Route path="/search"            element={<Search />} />
       </Routes>
     </BrowserRouter>
   )

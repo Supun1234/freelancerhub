@@ -60,7 +60,7 @@ export default function Sidebar() {
 
   const navItems = [
     { icon: '🏠', label: 'My Feed',  path: '/feed' },
-    { icon: '🔍', label: 'Explore',  path: '/explore' },
+    { icon: '🔍', label: 'Search',  path: '/search' },
     { icon: '📋', label: 'My Jobs',  path: '/jobs' },
     { icon: '💬', label: 'Messages', path: '/messages' },
     { icon: '⭐', label: 'Reviews',  path: '/reviews' },

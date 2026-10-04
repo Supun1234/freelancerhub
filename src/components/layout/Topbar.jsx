@@ -75,15 +75,20 @@ export default function Topbar() {
         rounded-lg px-3 py-2
       ">
         <span className="text-muted text-sm">🔍</span>
-        <input
-          type="text"
-          placeholder="Search skills, people, circles..."
-          className="
-            bg-transparent flex-1 text-sm
-            text-white placeholder-muted
-            outline-none
-          "
-        />
+<input
+  type="text"
+  placeholder="Search skills, people, circles..."
+  onKeyDown={e => {
+    if (e.key === 'Enter' && e.target.value.trim()) {
+      navigate(`/search?q=${encodeURIComponent(e.target.value.trim())}`)
+    }
+  }}
+  className="
+    bg-transparent flex-1 text-sm
+    text-white placeholder-muted
+    outline-none
+  "
+/>
       </div>
 
       {/* Right side */}
