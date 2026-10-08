@@ -26,25 +26,19 @@ export default function PostCard({ post }) {
   }
 
   const typeConfig = {
-    offering: {
-      label:  'OFFERING',
-      bg:     'bg-accent2/10',
-      text:   'text-accent2',
-      border: 'border-accent2/20',
-    },
-    seeking: {
-      label:  'SEEKING',
-      bg:     'bg-accent/10',
-      text:   'text-accent',
-      border: 'border-accent/20',
-    },
-    question: {
-      label:  'QUESTION',
-      bg:     'bg-purple-500/10',
-      text:   'text-purple-400',
-      border: 'border-purple-500/20',
-    },
-  }
+  offering: {
+    label:  'OFFERING',
+    bg:     'bg-accent2/10',
+    text:   'text-accent2',
+    border: 'border-accent2/20',
+  },
+  seeking: {
+    label:  'SEEKING',
+    bg:     'bg-accent/10',
+    text:   'text-accent',
+    border: 'border-accent/20',
+  },
+}
 
   const type = typeConfig[post.type] || typeConfig.offering
 

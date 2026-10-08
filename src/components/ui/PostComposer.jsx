@@ -27,11 +27,10 @@ export default function PostComposer({ circles, onPostCreated }) {
   }
 
   // post type options
-  const types = [
-    { value: 'offering',  label: '🛠️ Offering',  desc: 'I have a skill to offer' },
-    { value: 'seeking',   label: '🔍 Seeking',   desc: 'I need a service'        },
-    { value: 'question',  label: '💬 Question',  desc: 'Ask the community'       },
-  ]
+const types = [
+  { value: 'offering', label: '🛠️ Offering', desc: 'I have a skill to offer' },
+  { value: 'seeking',  label: '🔍 Seeking',  desc: 'I need a service'        },
+]
 
   // add tag on Enter or comma
   function handleTagKeyDown(e) {

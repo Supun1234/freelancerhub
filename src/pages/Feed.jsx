@@ -143,11 +143,10 @@ let query = supabase
           rounded-xl p-1 mb-4
         ">
           {[
-            { label: 'All Posts', value: 'all'      },
-            { label: 'Offering',  value: 'offering'  },
-            { label: 'Seeking',   value: 'seeking'   },
-            { label: 'Questions', value: 'question'  },
-          ].map(tab => (
+  { label: 'All Posts', value: 'all'      },
+  { label: 'Offering',  value: 'offering'  },
+  { label: 'Seeking',   value: 'seeking'   },
+].map(tab => (
             <button
               key={tab.value}
               onClick={() => setActiveTab(tab.value)}
