@@ -10,6 +10,7 @@ import EditProfile   from './pages/EditProfile'
 import Notifications from './pages/Notifications'
 import Messages      from './pages/Messages'
 import Search        from './pages/Search'
+import MyPosts       from './pages/MyPosts'
 
 function App() {
   return (
@@ -26,6 +27,7 @@ function App() {
         <Route path="/notifications"     element={<Notifications />} />
         <Route path="/messages"          element={<Messages />} />
         <Route path="/search"            element={<Search />} />
+        <Route path="/my-posts"          element={<MyPosts />} />
       </Routes>
     </BrowserRouter>
   )

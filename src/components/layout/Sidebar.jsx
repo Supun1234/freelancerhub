@@ -55,14 +55,15 @@ async function toggleCircle(circleId) {
   if (onCircleChange) onCircleChange()
 }
 
-  const navItems = [
-    { icon: '🏠', label: 'My Feed',       path: '/feed'          },
-    { icon: '🔍', label: 'Search',         path: '/search'        },
-    { icon: '📋', label: 'My Jobs',        path: '/jobs'          },
-    { icon: '💬', label: 'Messages',       path: '/messages'      },
-    { icon: '🔔', label: 'Notifications',  path: '/notifications' },
-    { icon: '👤', label: 'Profile',        path: `/profile/${profile?.username}` },
-  ]
+const navItems = [
+  { icon: '🏠', label: 'My Feed',       path: '/feed'          },
+  { icon: '🔍', label: 'Search',         path: '/search'        },
+  { icon: '📝', label: 'My Posts',       path: '/my-posts'      },
+  { icon: '📋', label: 'My Jobs',        path: '/jobs'          },
+  { icon: '💬', label: 'Messages',       path: '/messages'      },
+  { icon: '🔔', label: 'Notifications',  path: '/notifications' },
+  { icon: '👤', label: 'Profile',        path: `/profile/${profile?.username}` },
+]
 
   return (
     <aside className={`
