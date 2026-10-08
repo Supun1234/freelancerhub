@@ -7,36 +7,74 @@ export default function Topbar({ onMenuClick }) {
   const { profile: authProfile, signOut } = useAuth()
   const navigate = useNavigate()
 
-const [unreadMessages, setUnreadMessages] = useState(0)
+  const [unreadNotifs,   setUnreadNotifs]   = useState(0)
+  const [unreadMessages, setUnreadMessages] = useState(0)
 
-useEffect(() => {
-  if (!authProfile) return
-  fetchUnreadMessages()
+  useEffect(() => {
+    if (!authProfile) return
 
-  const channel = supabase
-    .channel('messages-badge')
-    .on('postgres_changes', {
-      event: 'INSERT',
-      schema: 'public',
-      table: 'messages',
-      filter: `receiver_id=eq.${authProfile.id}`,
-    }, () => {
-      fetchUnreadMessages()
-    })
-    .subscribe()
+    fetchUnreadNotifs()
+    fetchUnreadMessages()
 
-  return () => supabase.removeChannel(channel)
-}, [authProfile])
+    // realtime — notifications
+const notifChannel = supabase
+  .channel('notif-badge')
+  .on('postgres_changes', {
+    event:  'INSERT',
+    schema: 'public',
+    table:  'notifications',
+    filter: `user_id=eq.${authProfile.id}`,
+  }, () => fetchUnreadNotifs())
+  .on('postgres_changes', {
+    event:  'UPDATE',
+    schema: 'public',
+    table:  'notifications',
+    filter: `user_id=eq.${authProfile.id}`,
+  }, () => fetchUnreadNotifs())
+  .subscribe()
 
-async function fetchUnreadMessages() {
-  if (!authProfile) return
-  const { count } = await supabase
-    .from('messages')
-    .select('*', { count: 'exact', head: true })
-    .eq('receiver_id', authProfile.id)
-    .eq('is_read', false)
-  setUnreadMessages(count || 0)
-}
+    // realtime — messages
+const msgChannel = supabase
+  .channel('msg-badge')
+  .on('postgres_changes', {
+    event:  'INSERT',
+    schema: 'public',
+    table:  'messages',
+    filter: `receiver_id=eq.${authProfile.id}`,
+  }, () => fetchUnreadMessages())
+  .on('postgres_changes', {
+    event:  'UPDATE',
+    schema: 'public',
+    table:  'messages',
+    filter: `receiver_id=eq.${authProfile.id}`,
+  }, () => fetchUnreadMessages())
+  .subscribe()
+
+    return () => {
+      supabase.removeChannel(notifChannel)
+      supabase.removeChannel(msgChannel)
+    }
+  }, [authProfile])
+
+  async function fetchUnreadNotifs() {
+    if (!authProfile) return
+    const { count } = await supabase
+      .from('notifications')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', authProfile.id)
+      .eq('is_read', false)
+    setUnreadNotifs(count || 0)
+  }
+
+  async function fetchUnreadMessages() {
+    if (!authProfile) return
+    const { count } = await supabase
+      .from('messages')
+      .select('*', { count: 'exact', head: true })
+      .eq('receiver_id', authProfile.id)
+      .eq('is_read', false)
+    setUnreadMessages(count || 0)
+  }
 
   async function handleSignOut() {
     await signOut()
@@ -66,7 +104,7 @@ async function fetchUnreadMessages() {
         <span className="text-accent2">Hub</span>
       </Link>
 
-      {/* Burger menu — mobile only */}
+      {/* Burger — mobile only */}
       <button
         onClick={onMenuClick}
         className="
@@ -119,7 +157,7 @@ async function fetchUnreadMessages() {
           "
         >
           🔔
-          {unreadCount > 0 && (
+          {unreadNotifs > 0 && (
             <span className="
               absolute -top-1 -right-1
               min-w-4 h-4 px-1
@@ -127,34 +165,34 @@ async function fetchUnreadMessages() {
               font-display font-bold text-xs
               rounded-full flex items-center justify-center
             ">
-              {unreadCount > 9 ? '9+' : unreadCount}
+              {unreadNotifs > 9 ? '9+' : unreadNotifs}
             </span>
           )}
         </button>
 
         {/* Messages */}
-<button
-  onClick={() => navigate('/messages')}
-  className="
-    w-9 h-9 flex items-center justify-center
-    bg-surface2 border border-border
-    rounded-lg text-base hover:border-muted
-    transition-colors relative
-  "
->
-  💬
-  {unreadMessages > 0 && (
-    <span className="
-      absolute -top-1 -right-1
-      min-w-4 h-4 px-1
-      bg-accent2 text-black
-      font-display font-bold text-xs
-      rounded-full flex items-center justify-center
-    ">
-      {unreadMessages > 9 ? '9+' : unreadMessages}
-    </span>
-  )}
-</button>
+        <button
+          onClick={() => navigate('/messages')}
+          className="
+            w-9 h-9 flex items-center justify-center
+            bg-surface2 border border-border
+            rounded-lg text-base hover:border-muted
+            transition-colors relative
+          "
+        >
+          💬
+          {unreadMessages > 0 && (
+            <span className="
+              absolute -top-1 -right-1
+              min-w-4 h-4 px-1
+              bg-accent2 text-black
+              font-display font-bold text-xs
+              rounded-full flex items-center justify-center
+            ">
+              {unreadMessages > 9 ? '9+' : unreadMessages}
+            </span>
+          )}
+        </button>
 
         {/* Avatar dropdown */}
         <div className="relative group">
@@ -229,13 +267,13 @@ async function fetchUnreadMessages() {
               "
             >
               🔔 Notifications
-              {unreadCount > 0 && (
+              {unreadNotifs > 0 && (
                 <span className="
                   ml-auto bg-accent text-black
                   font-display font-bold text-xs
                   px-1.5 py-0.5 rounded-full
                 ">
-                  {unreadCount}
+                  {unreadNotifs}
                 </span>
               )}
             </Link>

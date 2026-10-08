@@ -83,25 +83,25 @@ export default function Messages() {
     setFetching(false)
   }
 
-  async function fetchMessages(jobId) {
-    const { data } = await supabase
-      .from('messages')
-      .select(`
-        *,
-        sender:sender_id ( full_name, username )
-      `)
-      .eq('job_id', jobId)
-      .order('created_at', { ascending: true })
-    setMessages(data || [])
+async function fetchMessages(jobId) {
+  const { data } = await supabase
+    .from('messages')
+    .select(`
+      *,
+      sender:sender_id ( full_name, username )
+    `)
+    .eq('job_id', jobId)
+    .order('created_at', { ascending: true })
+  setMessages(data || [])
 
-    // mark as read
-    await supabase
-      .from('messages')
-      .update({ is_read: true })
-      .eq('job_id', jobId)
-      .eq('receiver_id', user.id)
-      .eq('is_read', false)
-  }
+  // mark as read
+  await supabase
+    .from('messages')
+    .update({ is_read: true })
+    .eq('job_id', jobId)
+    .eq('receiver_id', user.id)
+    .eq('is_read', false)
+}
 
 function subscribeToMessages(jobId) {
   const channel = supabase
