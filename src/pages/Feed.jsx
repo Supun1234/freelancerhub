@@ -53,13 +53,13 @@ export default function Feed() {
   async function fetchPosts() {
     setFetching(true)
 
-    let query = supabase
-      .from('posts')
-      .select(`
-        *,
-        users ( full_name, username ),
-        circles ( name, color, icon )
-      `)
+let query = supabase
+  .from('posts')
+  .select(`
+    *,
+    users ( full_name, username, avg_rating, total_jobs ),
+    circles ( name, color, icon )
+  `)
       .eq('is_active', true)
       .order('created_at', { ascending: false })
       .limit(20)
