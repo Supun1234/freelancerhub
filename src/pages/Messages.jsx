@@ -103,21 +103,25 @@ export default function Messages() {
       .eq('is_read', false)
   }
 
-  function subscribeToMessages(jobId) {
-    const channel = supabase
-      .channel(`messages-${jobId}`)
-      .on('postgres_changes', {
-        event: 'INSERT',
-        schema: 'public',
-        table: 'messages',
-        filter: `job_id=eq.${jobId}`,
-      }, payload => {
+function subscribeToMessages(jobId) {
+  const channel = supabase
+    .channel(`messages-${jobId}`)
+    .on('postgres_changes', {
+      event: 'INSERT',
+      schema: 'public',
+      table: 'messages',
+      filter: `job_id=eq.${jobId}`,
+    }, payload => {
+      // only add if from other person
+      // own messages already added optimistically
+      if (payload.new.sender_id !== user.id) {
         setMessages(prev => [...prev, payload.new])
-      })
-      .subscribe()
+      }
+    })
+    .subscribe()
 
-    return () => supabase.removeChannel(channel)
-  }
+  return () => supabase.removeChannel(channel)
+}
 
 async function handleSend(e) {
   e.preventDefault()
@@ -130,14 +134,39 @@ async function handleSend(e) {
     ? selectedJob.client_id
     : selectedJob.freelancer_id
 
-  await supabase
+  const messageBody = newMessage.trim()
+
+  // optimistically add message to UI immediately
+  const optimisticMsg = {
+    id:          `temp-${Date.now()}`,
+    job_id:      selectedJob.id,
+    sender_id:   user.id,
+    receiver_id: receiverId,
+    body:        messageBody,
+    is_read:     false,
+    created_at:  new Date().toISOString(),
+  }
+  setMessages(prev => [...prev, optimisticMsg])
+  setNewMessage('')
+
+  // insert to database
+  const { data: inserted } = await supabase
     .from('messages')
     .insert({
       job_id:      selectedJob.id,
       sender_id:   user.id,
       receiver_id: receiverId,
-      body:        newMessage.trim(),
+      body:        messageBody,
     })
+    .select()
+    .single()
+
+  // replace optimistic message with real one
+  if (inserted) {
+    setMessages(prev =>
+      prev.map(m => m.id === optimisticMsg.id ? inserted : m)
+    )
+  }
 
   // notify receiver
   await supabase
@@ -146,10 +175,9 @@ async function handleSend(e) {
       user_id:      receiverId,
       type:         'new_message',
       reference_id: selectedJob.id,
-      body:         `New message about "${selectedJob.title}" — "${newMessage.trim().slice(0, 40)}..."`,
+      body:         `${profile?.full_name} sent you a message about "${selectedJob.title}"`,
     })
 
-  setNewMessage('')
   setSending(false)
 }
 

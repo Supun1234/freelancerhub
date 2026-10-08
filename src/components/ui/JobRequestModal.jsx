@@ -59,14 +59,21 @@ export default function JobRequestModal({ freelancer, onClose, onSent }) {
     }
 
     // send notification to freelancer
-    await supabase
-      .from('notifications')
-      .insert({
-        user_id:      freelancer.id,
-        type:         'job_request',
-        reference_id: job.id,
-        body:         `You have a new job request — "${form.title}"`,
-      })
+    // get sender name
+const { data: sender } = await supabase
+  .from('users')
+  .select('full_name')
+  .eq('id', user.id)
+  .single()
+
+await supabase
+  .from('notifications')
+  .insert({
+    user_id:      freelancer.id,
+    type:         'job_request',
+    reference_id: job.id,
+    body:         `${sender?.full_name} sent you a job request — "${form.title}"`,
+  })
 
     setLoading(false)
     onSent(job)

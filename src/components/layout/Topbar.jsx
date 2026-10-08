@@ -7,37 +7,36 @@ export default function Topbar({ onMenuClick }) {
   const { profile: authProfile, signOut } = useAuth()
   const navigate = useNavigate()
 
-  const [unreadCount, setUnreadCount] = useState(0)
+const [unreadMessages, setUnreadMessages] = useState(0)
 
-  useEffect(() => {
-    if (!authProfile) return
+useEffect(() => {
+  if (!authProfile) return
+  fetchUnreadMessages()
 
-    fetchUnreadCount()
+  const channel = supabase
+    .channel('messages-badge')
+    .on('postgres_changes', {
+      event: 'INSERT',
+      schema: 'public',
+      table: 'messages',
+      filter: `receiver_id=eq.${authProfile.id}`,
+    }, () => {
+      fetchUnreadMessages()
+    })
+    .subscribe()
 
-    const channel = supabase
-      .channel('notifications')
-      .on('postgres_changes', {
-        event: 'INSERT',
-        schema: 'public',
-        table: 'notifications',
-        filter: `user_id=eq.${authProfile.id}`,
-      }, () => {
-        fetchUnreadCount()
-      })
-      .subscribe()
+  return () => supabase.removeChannel(channel)
+}, [authProfile])
 
-    return () => supabase.removeChannel(channel)
-  }, [authProfile])
-
-  async function fetchUnreadCount() {
-    if (!authProfile) return
-    const { count } = await supabase
-      .from('notifications')
-      .select('*', { count: 'exact', head: true })
-      .eq('user_id', authProfile.id)
-      .eq('is_read', false)
-    setUnreadCount(count || 0)
-  }
+async function fetchUnreadMessages() {
+  if (!authProfile) return
+  const { count } = await supabase
+    .from('messages')
+    .select('*', { count: 'exact', head: true })
+    .eq('receiver_id', authProfile.id)
+    .eq('is_read', false)
+  setUnreadMessages(count || 0)
+}
 
   async function handleSignOut() {
     await signOut()
@@ -134,17 +133,28 @@ export default function Topbar({ onMenuClick }) {
         </button>
 
         {/* Messages */}
-        <button
-          onClick={() => navigate('/messages')}
-          className="
-            w-9 h-9 flex items-center justify-center
-            bg-surface2 border border-border
-            rounded-lg text-base hover:border-muted
-            transition-colors
-          "
-        >
-          💬
-        </button>
+<button
+  onClick={() => navigate('/messages')}
+  className="
+    w-9 h-9 flex items-center justify-center
+    bg-surface2 border border-border
+    rounded-lg text-base hover:border-muted
+    transition-colors relative
+  "
+>
+  💬
+  {unreadMessages > 0 && (
+    <span className="
+      absolute -top-1 -right-1
+      min-w-4 h-4 px-1
+      bg-accent2 text-black
+      font-display font-bold text-xs
+      rounded-full flex items-center justify-center
+    ">
+      {unreadMessages > 9 ? '9+' : unreadMessages}
+    </span>
+  )}
+</button>
 
         {/* Avatar dropdown */}
         <div className="relative group">

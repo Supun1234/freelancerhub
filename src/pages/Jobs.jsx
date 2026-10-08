@@ -45,14 +45,20 @@ export default function Jobs() {
 
     // notify client
     const job = jobs.find(j => j.id === jobId)
-    await supabase
-      .from('notifications')
-      .insert({
-        user_id:      job.client.id,
-        type:         'job_accepted',
-        reference_id: jobId,
-        body:         `Your job request "${job.title}" was accepted!`,
-      })
+const { data: sender } = await supabase
+  .from('users')
+  .select('full_name')
+  .eq('id', user.id)
+  .single()
+
+await supabase
+  .from('notifications')
+  .insert({
+    user_id:      job.client.id,
+    type:         'job_accepted',
+    reference_id: jobId,
+    body:         `${sender?.full_name} accepted your job request — "${job.title}"`,
+  })
 
     fetchJobs()
   }
@@ -91,16 +97,22 @@ export default function Jobs() {
 
     // notify other party
     const notifyId = isFreelancer ? job.client.id : job.freelancer.id
-    await supabase
-      .from('notifications')
-      .insert({
-        user_id:      notifyId,
-        type:         'job_completed',
-        reference_id: jobId,
-        body:         bothConfirmed
-          ? `Job "${job.title}" is complete. Leave a review!`
-          : `${isFreelancer ? 'Freelancer' : 'Client'} marked "${job.title}" as done. Please confirm.`,
-      })
+    const { data: sender } = await supabase
+  .from('users')
+  .select('full_name')
+  .eq('id', user.id)
+  .single()
+
+await supabase
+  .from('notifications')
+  .insert({
+    user_id:      notifyId,
+    type:         'job_completed',
+    reference_id: jobId,
+    body:         bothConfirmed
+      ? `Job "${job.title}" is complete — leave a review for ${sender?.full_name}!`
+      : `${sender?.full_name} marked "${job.title}" as done. Please confirm.`,
+  })
 
     fetchJobs()
   }
