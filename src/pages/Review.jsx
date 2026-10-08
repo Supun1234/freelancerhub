@@ -83,91 +83,87 @@ export default function Review() {
     : null
 
   async function handleSubmit(e) {
-    e.preventDefault()
-    setError(null)
+  e.preventDefault()
+  setError(null)
 
-    if (rating === 0) {
-      setError('Please select a star rating.')
-      return
-    }
-
-    if (body.trim().length < 20) {
-      setError('Please write at least 20 characters explaining your experience.')
-      return
-    }
-
-    setSubmitting(true)
-
-    // insert review
-    const { error: reviewError } = await supabase
-      .from('reviews')
-      .insert({
-        job_id:      jobId,
-        reviewer_id: user.id,
-        reviewee_id: reviewee.id,
-        rating,
-        body:        body.trim(),
-        is_visible:  false,
-      })
-
-    if (reviewError) {
-      setError(reviewError.message)
-      setSubmitting(false)
-      return
-    }
-
-    // check if both reviews now exist — if so reveal both
-    await new Promise(resolve => setTimeout(resolve, 500))
-
-    const { data: bothReviews } = await supabase
-      .from('reviews')
-      .select('id, reviewee_id, rating')
-      .eq('job_id', jobId)
-
-    if (bothReviews && bothReviews.length === 2) {
-      // reveal both reviews
-      await supabase
-        .from('reviews')
-        .update({ is_visible: true })
-        .eq('job_id', jobId)
-
-      // update ratings for both users
-      for (const review of bothReviews) {
-        await updateUserRating(review.reviewee_id)
-      }
-
-      // notify both parties
-      await supabase
-        .from('notifications')
-        .insert([
-          {
-            user_id:      job.freelancer_id,
-            type:         'review_visible',
-            reference_id: jobId,
-            body:         'Both reviews are now visible on your profile.',
-          },
-          {
-            user_id:      job.client_id,
-            type:         'review_visible',
-            reference_id: jobId,
-            body:         'Both reviews are now visible on your profile.',
-          },
-        ])
-    } else {
-      // notify reviewee that a review is waiting
-      await supabase
-        .from('notifications')
-        .insert({
-          user_id:      reviewee.id,
-          type:         'review_pending',
-          reference_id: jobId,
-          body:         `Someone left you a review for "${job.title}". Leave yours to reveal both.`,
-        })
-    }
-
-    setDone(true)
-    setSubmitting(false)
+  if (rating === 0) {
+    setError('Please select a star rating.')
+    return
   }
+
+  if (body.trim().length < 20) {
+    setError('Please write at least 20 characters.')
+    return
+  }
+
+  setSubmitting(true)
+
+  // insert review
+  const { error: reviewError } = await supabase
+    .from('reviews')
+    .insert({
+      job_id:      jobId,
+      reviewer_id: user.id,
+      reviewee_id: reviewee.id,
+      rating,
+      body:        body.trim(),
+      is_visible:  false,
+    })
+
+  if (reviewError) {
+    setError(reviewError.message)
+    setSubmitting(false)
+    return
+  }
+
+  // call database function to reveal if both submitted
+  await supabase.rpc('reveal_reviews_if_both_submitted', {
+    p_job_id: jobId
+  })
+
+  // check if reviews are now visible
+  const { data: visibleReviews } = await supabase
+    .from('reviews')
+    .select('is_visible')
+    .eq('job_id', jobId)
+    .eq('reviewer_id', user.id)
+    .single()
+
+  const bothRevealed = visibleReviews?.is_visible === true
+
+  if (bothRevealed) {
+    // notify both parties
+    await supabase
+      .from('notifications')
+      .insert([
+        {
+          user_id:      job.freelancer_id,
+          type:         'review_visible',
+          reference_id: jobId,
+          body:         'Both reviews are now visible on your profile.',
+        },
+        {
+          user_id:      job.client_id,
+          type:         'review_visible',
+          reference_id: jobId,
+          body:         'Both reviews are now visible on your profile.',
+        },
+      ])
+  } else {
+    // notify reviewee that a review is waiting
+    await supabase
+      .from('notifications')
+      .insert({
+        user_id:      reviewee.id,
+        type:         'review_pending',
+        reference_id: jobId,
+        body:         `Someone left you a review for "${job.title}". Leave yours to reveal both.`,
+      })
+  }
+
+  setDone(true)
+  setSubmitting(false)
+}
 
   async function updateUserRating(userId) {
   // small delay to ensure visibility update is committed
